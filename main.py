@@ -32,26 +32,30 @@ def start(action):
     if timers_wait_for_user:
         print(f"~~~~~~press enter to start the {action}~~~~~~")
         input()
-    print_time(action)    
+    print_time(action)
 
 def random_actions():
     actions = []
+    return_string = ""
+
     with open('actions.config', 'r') as file:
-        actions = file.read().split(";")
-        
-    selected = random.choice(actions[:-2])
+        actions = file.read().split(";")[:-2]
 
-    while len(selected.split(";")) < 6:
-        drawn_action = random.choice(actions)
+    random.shuffle(actions)
+    length = len(actions)
+    if length > 6:
+        extra = length - 6
+        actions = actions[:-extra]
 
-        if drawn_action not in selected:
-            selected += "; " + drawn_action
+    for action in actions:
+        if action not in return_string:
+            return_string += action + "; "
 
-    return selected
+    return return_string
 
 def print_time(action):
     local_time = time.localtime()
-    local_time = f"{local_time.tm_hour}h{local_time.tm_min}m{local_time.tm_sec}s" 
+    local_time = f"{local_time.tm_hour}h{local_time.tm_min}m{local_time.tm_sec}s"
     print(f"{action} started at: {local_time}")
 
 def create_actions():
@@ -137,7 +141,7 @@ def load_config(first):
                         change_default_quote()
                 case _:
                     pass
-    return 
+    return
 
 def change_default_quote():
     global default_quote
@@ -162,7 +166,7 @@ def set_default_config():
         if len(file.read()) <= 0:
             flag = True
 
-    # override
+    # config file is empty, override with default
     if flag:
         with open('config.config', 'w') as file:
             file.write("update_config=True;\ncreate_actions=False;\nload_new_quote=False;\ninstant_start_timers=False;\nchange_default_quote=False;")
@@ -171,12 +175,11 @@ if __name__ == "__main__":
 
     load_config(True)
     set_default_quote()
-    try:    
+    try:
         count = 0
         while True:
             quote = get_random_quote()
             actions = random_actions()
-
             # break is over, alert the user to start the session
             if count > 0 : send_notification("Break Over!", "")
             start("session")
@@ -198,8 +201,8 @@ if __name__ == "__main__":
             start(brake_text)
             time.sleep(60*brake_duration)
             count += 1
-            
+
     except KeyboardInterrupt:
         set_default_config()
         print("\n....closing pomodoro app...")
-        exit() 
+        exit()
