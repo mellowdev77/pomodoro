@@ -38,7 +38,7 @@ def random_actions():
     actions = []
     return_string = ""
 
-    with open('actions.config', 'r') as file:
+    with open('config/actions.config', 'r') as file:
         actions = file.read().split(";")[:-2]
 
     random.shuffle(actions)
@@ -59,7 +59,7 @@ def print_time(action):
     print(f"{action} started at: {local_time}")
 
 def create_actions():
-    with open('actions.config', 'w') as file:
+    with open('config/actions.config', 'w') as file:
         print("Creating actions... (exit, quit, q, e)")
         user_input = ""
 
@@ -70,14 +70,14 @@ def create_actions():
 
 def update_config():
     operations = []
-    with open('config.config', 'r') as file:
+    with open('config/config.config', 'r') as file:
         for line in file.read().split("\n"):
             line_values = line.split("=")
             config_name = line_values[0]
             if len(config_name) > 1:
                 operations.append(config_name.strip())
 
-    with open('config.config', 'w') as file:
+    with open('config/config.config', 'w') as file:
         for operation in operations:
             text = ""
             match operation:
@@ -115,7 +115,7 @@ def string_to_boolean(input):
 def load_config(first):
     global load_quotes
     global timers_wait_for_user
-    with open('config.config', 'r') as file:
+    with open('config/config.config', 'r') as file:
         for line in file.read().split("\n"):
             line_values = line.split("=")
             if len(line_values) < 2:
@@ -145,7 +145,7 @@ def load_config(first):
 
 def change_default_quote():
     global default_quote
-    with open('default_quote.config', 'w') as file:
+    with open('config/default_quote.config', 'w') as file:
         print("insert the new default quote:")
         user_input = input()
         file.write(user_input)
@@ -153,22 +153,22 @@ def change_default_quote():
 
 def set_default_quote():
     global default_quote
-    with open('default_quote.config', 'r') as file:
+    with open('config/default_quote.config', 'r') as file:
         default_quote = file.read()
 
     if len(default_quote) > 0:
-        with open('default_quote.config', 'w') as file:
+        with open('config/default_quote.config', 'w') as file:
             file.write(default_quote)
 
 def set_default_config():
     flag = False
-    with open('config.config', 'r') as file:
+    with open('config/config.config', 'r') as file:
         if len(file.read()) <= 0:
             flag = True
 
     # config file is empty, override with default
     if flag:
-        with open('config.config', 'w') as file:
+        with open('config/config.config', 'w') as file:
             file.write("update_config=True;\ncreate_actions=False;\nload_new_quote=False;\ninstant_start_timers=False;\nchange_default_quote=False;")
 
 if __name__ == "__main__":
