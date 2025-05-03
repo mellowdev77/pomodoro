@@ -11,15 +11,15 @@ todays_average_session = (0,0)
 todays_average_break = (0,0)
 
 def get_random_quote():
-    global load_quotes
-    if load_quotes:
+    if not load_quotes:
         try:
             response = requests.get("https://zenquotes.io/api/random")
             response.raise_for_status()  # Raise an error for bad responses
             quote_data = response.json()
             return f'"{quote_data[0]["q"]}" - {quote_data[0]["a"]}'
         except Exception as e:
-            return f"Error fetching quote: {e}"
+            print(f"Error fetching quote: {e}")
+            return default_quote
     else:
         return default_quote
 
@@ -31,7 +31,6 @@ def send_notification(title, quote):
     )
 
 def start(action):
-    global timers_wait_for_user
     if timers_wait_for_user:
         print(f"~~~~~~press enter to start the {action}~~~~~~")
         input()
@@ -73,6 +72,7 @@ def create_actions():
             file.write(user_input + ";")
 
 def update_config():
+    print("updating the config...")
     operations = []
     with open('config/config.config', 'r') as file:
         for line in file.read().split("\n"):
@@ -119,6 +119,7 @@ def string_to_boolean(input):
 def load_config(first_time):
     global load_quotes
     global timers_wait_for_user
+
     with open('config/config.config', 'r') as file:
         for line in file.read().split("\n"):
             line_values = line.split("=")
@@ -133,6 +134,8 @@ def load_config(first_time):
                     if bool_value and first_time:
                         update_config()
                         return
+                    else:
+                        print("not updating config... saved on config/config.config")
                 case "create_actions":
                     if bool_value:
                         create_actions()
@@ -155,14 +158,10 @@ def change_default_quote():
         file.write(user_input)
         default_quote = user_input
 
-def set_default_quote():
+def load_default_quote():
     global default_quote
     with open('config/default_quote.config', 'r') as file:
         default_quote = file.read()
-
-    if len(default_quote) > 0:
-        with open('config/default_quote.config', 'w') as file:
-            file.write(default_quote)
 
 def set_default_config():
     flag = False
@@ -184,61 +183,62 @@ def calculate_average_session_time(action, duration):
             amount_of_breaks = todays_average_break[1]
             total = (average_duration * amount_of_breaks) + duration
             new_average = total / (amount_of_breaks + 1)
-            todays_average_break = (new_average, amount_of_breaks+1)
+            todays_average_break = (new_average, amount_of_breaks + 1)
 
         case "session":
             average_duration = todays_average_session[0]
             amount_of_sessions = todays_average_session[1]
             total = (average_duration * amount_of_sessions) + duration
             new_average = total / (amount_of_sessions + 1)
-            todays_average_session = (new_average, amount_of_sessions+1)
+            todays_average_session = (new_average, amount_of_sessions + 1)
 
 def calculate_time_passed(previous_time):
     return ((time.localtime().tm_hour - previous_time.tm_hour)*24*60 + (time.localtime().tm_min - previous_time.tm_min)*60 + (time.localtime().tm_sec - previous_time.tm_sec))/60
 
 def print_todays_averages():
-    global todays_average_break
-    global todays_average_session
-
-    print(f"today the average session time was: {todays_average_session[0]:.2f} mins, and you completed {todays_average_session[1]} sessions")
+    print(f"\ntoday the average session time was: {todays_average_session[0]:.2f} mins, and you completed {todays_average_session[1]} sessions")
     print(f"today the average break time was: {todays_average_break[0]:.2f} mins, and you took {todays_average_break[1]} breaks")
 
-    with open('config/average_ratio.config', 'a') as file:
-        file.write(f"{todays_average_session[0]},{todays_average_break[0]};")
-
-    save_average_duration_over_time()
-
 def save_average_duration_over_time():
-    dictionary = {}
-    with open('config/average_ratio.config', 'r') as file:
-        for line in file.read().split(";"):
-            if line != "" and line != "\n":
-                dictionary[line.split(",")[0]] = line.split(",")[1]
+    if todays_average_session[0] != 0 and todays_average_session[0] != 0:
+        with open('config/average_ratio.config', 'a') as file:
+            # average session length, amount of sessions, average break length, amount of breaks
+            file.write(f"{todays_average_session[0]},{todays_average_session[1]},{todays_average_break[0]},{todays_average_break[1]};")
 
-    keys_sum = 0
-    values_sum = 0
-    for k,v in dictionary.items():
-        keys_sum += float(k)
-        values_sum += float(v)
+        session_sum = 0
+        session_count = 0
+        break_sum = 0
+        break_count = 0
+        with open('config/average_ratio.config', 'r') as file:
+            for line in file.read().split(";"):
+                if line != "" and line != "\n":
+                    session_sum += float(line.split(",")[0]) * float(line.split(",")[1])
+                    session_count += float(line.split(",")[1])
 
-    average_session = keys_sum/len(dictionary.keys())
-    average_break = values_sum/len(dictionary.values())
-    print(f"your total average work session is: {average_session:.2f}.")
-    print(f"your total average break is: {average_break:.2f}.")
-    if (average_break != 0):
-        print(f"your ratio is: {(average_session/average_break):.2f}. The standard pomodoro ratio is: 5.")
+                    break_sum += float(line.split(",")[2]) * float(line.split(",")[3])
+                    break_count += float(line.split(",")[3])
+
+        if session_count != 0 and break_count != 0:
+            average_session = session_sum / session_count
+            average_break = break_sum / break_count
+            print(f"your total average work session is: {average_session:.2f}.")
+            print(f"your total average break is: {average_break:.2f}.")
+            if (average_break != 0):
+                print(f"your ratio is: {(average_session/average_break):.2f}. The standard pomodoro ratio is: 5.")
 
 if __name__ == "__main__":
 
     load_config(True)
-    set_default_quote()
+    load_default_quote()
     try:
         while True:
             quote = get_random_quote()
             actions = random_actions()
 
             # break is over, alert the user to start the session
-            if timers_wait_for_user: send_notification("Press enter to start the session.", "")
+            if timers_wait_for_user:
+                send_notification("Press enter to start the session.", "")
+
             time_before_start = time.localtime()
             start("session")
 
@@ -258,7 +258,7 @@ if __name__ == "__main__":
                 brake_text = "long brake"
 
             if timers_wait_for_user:
-                send_notification(f"Session Over! Start the {str.capitalize(brake_text)} ({brake_duration} mins)", [])
+                send_notification(f"Session Over! Start the {str.capitalize(brake_text)} ({brake_duration} mins)", "")
 
             time_before_start = time.localtime()
             start(brake_text)
@@ -272,5 +272,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         set_default_config()
         print_todays_averages()
+        save_average_duration_over_time()
         print("\n....closing pomodoro app...")
         exit()
