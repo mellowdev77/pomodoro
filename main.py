@@ -2,20 +2,19 @@ import time
 import requests
 from plyer import notification
 from io_operations import *
+from dataclasses import dataclass
 
-## global variables
-load_quotes = True
-timers_dont_wait_for_user = True
-timers_based_on_average = False
-default_quote = ""
-default_round = 25
-default_break = 5
-# (duration, number of rounds)
-session_rounds = (0,0)
-session_breaks = (0,0)
+@dataclass
+class Config:
+    load_quotes: bool = True
+    timers_dont_wait_for_user: bool = False
+    default_quote: str = "Chop wood"
+    default_round: float = 25.0
+    default_break: float = 5.0
+    timers_based_on_average = True
 
-def get_random_quote():
-    if load_quotes:
+def get_random_quote(default_quote):
+    if config.load_quotes:
         try:
             response = requests.get("https://zenquotes.io/api/random")
             response.raise_for_status()  # Raise an error for bad responses
@@ -31,7 +30,7 @@ def send_notification(title, quote):
     notification.notify(title, quote)
 
 def start_action(action):
-    if timers_dont_wait_for_user:
+    if config.timers_dont_wait_for_user:
         print(f"~~~~~~press enter to start the {action}~~~~~~")
         input()
 
@@ -39,9 +38,7 @@ def start_action(action):
     local_time = f"{local_time.tm_hour}h{local_time.tm_min}m{local_time.tm_sec}s"
     print(f"{action} started at: {local_time}")
 
-def update_session_average(action, duration):
-    global session_breaks
-    global session_rounds
+def update_session_average(action, duration, session_rounds, session_breaks):
     match action:
         case "break":
             average_duration = session_breaks[0]
@@ -56,26 +53,30 @@ def update_session_average(action, duration):
             total = (average_duration * amount_of_rounds) + duration
             new_average = total / (amount_of_rounds + 1)
             session_rounds = (new_average, amount_of_rounds + 1)
+    return session_breaks, session_rounds
 
 def calculate_time_passed(previous_time):
     return ((time.localtime().tm_hour - previous_time.tm_hour)*24*60 + (time.localtime().tm_min - previous_time.tm_min)*60 + (time.localtime().tm_sec - previous_time.tm_sec))/60
 
 if __name__ == "__main__":
-    load_config(True)
-    default_quote = load_default_quote()
-    default_round, default_break = load_default_lengths()
-    round_time = default_round
-    break_time = default_break
+    config = load_config(True)
 
-    if timers_based_on_average:
-        round_time, break_time = total_average_round_time(default_round, default_break)
+    config.default_quote = load_default_quote()
+    config.default_round, config.default_break = load_default_lengths()
+    round_time = config.default_round
+    break_time = config.default_break
+    session_rounds = (0,0)
+    session_breaks = (0,0)
+
+    if config.timers_based_on_average:
+        round_time, break_time = total_average_round_time()
     try:
         while True:
-            quote = get_random_quote()
+            quote = get_random_quote(config.default_quote)
             actions = random_actions()
 
             # break is over, alert the user to start the round
-            if timers_dont_wait_for_user:
+            if config.timers_dont_wait_for_user:
                 send_notification("Press enter to start the round.", "")
 
             time_before_start = time.localtime()
@@ -84,7 +85,7 @@ if __name__ == "__main__":
             send_notification(f"Round Started! ({round_time} mins)", quote)
             time.sleep(60 * round_time)
             round_duration = calculate_time_passed(time_before_start)
-            update_session_average("round", round_duration)
+            session_rounds, session_breaks = update_session_average("round", round_duration, session_rounds, session_breaks)
 
             # round is over, alert the user to start the break
             break_duration = break_time
@@ -95,8 +96,8 @@ if __name__ == "__main__":
                 break_duration = break_time + 10
                 break_text = "long break"
 
-            if timers_dont_wait_for_user:
-                send_notification(f"round Over! Start the {str.capitalize(break_text)} ({break_duration} mins)", "")
+            if config.timers_dont_wait_for_user:
+                send_notification(f"Round Over! Start the {str.capitalize(break_text)} ({break_duration} mins)", "")
 
             time_before_start = time.localtime()
             start_action(break_text)
@@ -105,13 +106,13 @@ if __name__ == "__main__":
             # break or long break started
             time.sleep(60 * break_duration)
             round_duration = calculate_time_passed(time_before_start)
-            update_session_average("break", round_duration)
+            session_rounds, session_breaks = update_session_average("break", round_duration, session_rounds, session_breaks)
 
     except KeyboardInterrupt:
         set_default_config()
-        save_average_duration_over_time()
+        save_average_duration_over_time(session_rounds, session_breaks)
 
-        print(f"\ntoday the average round time was: {session_rounds[0]:.2f} mins, and you completed {session_rounds[1]} rounds")
-        print(f"today the average break time was: {session_breaks[0]:.2f} mins, and you took {session_breaks[1]} breaks")
+        print(f"\nThis session, your {session_rounds[1]} rounds were on average {session_rounds[0]:.1f} mins long each.")
+        print(f"This session, your {session_breaks[1]} breaks were on average {session_breaks[0]:.1f} mins long each.")
         print("\n....closing pomodoro app...")
         exit()

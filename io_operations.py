@@ -1,4 +1,5 @@
 from main import *
+from main import Config
 import random
 
 # utils
@@ -11,18 +12,19 @@ def string_to_boolean(input):
             return True
         case "true":
             return True
+        case "t":
+            return True
         case _:
             return False
 
 # config
 def load_config(first_time):
-    global load_quotes, timers_dont_wait_for_user,  default_quote, default_round, default_break, timers_based_on_average
-
+    config = Config()
     with open('config/config.config', 'r') as file:
         for line in file.read().split("\n"):
             line_values = line.split("=")
             if len(line_values) < 2:
-                return
+                return config
 
             bool_value = string_to_boolean(line_values[1][:-1])
             config_name = line_values[0]
@@ -30,30 +32,30 @@ def load_config(first_time):
             match(config_name.strip()):
                 case "update_config":
                     if bool_value and first_time:
-                        update_config()
-                        return
+                        update_config(config)
+                        return load_config(False)
                     else:
                         print("not updating config... saved on config/config.config")
                 case "create_actions":
                     if bool_value:
                         create_actions()
                 case "load_new_quote":
-                    load_quotes = bool_value
+                    config.load_quotes = bool_value
                 case "instant_start_timers":
-                    timers_dont_wait_for_user = bool_value
+                    config.timers_dont_wait_for_user = bool_value
                 case "change_default_quote":
                     if bool_value:
-                        default_quote = change_default_quote()
+                        config.default_quote = change_default_quote()
                 case "default_timers_based_on_round_average":
-                    timers_based_on_average = bool_value
-                case "change_default_length":
+                    config.timers_based_on_average = bool_value
+                case "change_default_timers":
                     if bool_value:
-                        default_round, default_break = change_default_lengths()
+                        config.default_round, config.default_break = change_default_lengths()
                 case _:
                     pass
-    return
+    return config
 
-def update_config():
+def update_config(config):
     print("updating the config...")
     operations = []
     with open('config/config.config', 'r') as file:
@@ -78,17 +80,15 @@ def update_config():
                 case "change_default_quote":
                     text = "Change your default quote?"
                 case "default_timers_based_on_round_average":
-                    text = f"Use your average round and break duration instead of the default? ({default_round}, {default_break})?"
+                    text = f"Use your average round and break duration instead of the default? ({config.default_round}, {config.default_break})?"
                 case "change_default_timers":
-                    text = f"Change your default timers length? Current: ({default_round}, {default_break})?"
+                    text = f"Change your default timers length? Current: ({config.default_round}, {config.default_break})?"
                 case _:
                     text = f"Please provide a value for: {operation}."
 
             print(text)
             bool_value = string_to_boolean(input())
             file.write(f"{operation}={bool_value};\n")
-
-    load_config(False)
 
 def set_default_config():
     flag = False
@@ -100,7 +100,6 @@ def set_default_config():
     if flag:
         with open('config/config.config', 'w') as file:
             file.write("update_config=True;\ncreate_actions=False;\nload_new_quote=False;\ninstant_start_timers=False;\nchange_default_quote=False;\ndefault_timers_based_on_session_average=False;\nchange_default_length=False;")
-
 
 # break actions
 def create_actions():
@@ -135,8 +134,7 @@ def random_actions():
 # quotes
 def load_default_quote():
     with open('config/default_quote.config', 'r') as file:
-        default_quote = file.read()
-    return default_quote
+        return file.read()
 
 def change_default_quote():
     with open('config/default_quote.config', 'w') as file:
@@ -147,7 +145,6 @@ def change_default_quote():
     return default_quote
 
 # break and round duration
-
 def load_default_lengths():
     with open('config/default_length.config', 'r') as file:
         read = file.read().split(",")
@@ -176,19 +173,20 @@ def change_default_lengths():
                 print("\n...length should be a number...\n")
     return default_round, default_break
 
-def save_average_duration_over_time(session_rounds, session_breaks, default_round, default_break):
+def save_average_duration_over_time(session_rounds, session_breaks,):
     if session_rounds[0] != 0 and session_rounds[0] != 0:
         with open('config/average_ratio.config', 'a') as file:
             # average round length, amount of rounds, average break length, amount of breaks
             file.write(f"{session_rounds[0]},{session_rounds[1]},{session_breaks[0]},{session_breaks[1]};")
 
-    average_round, average_break = total_average_round_time(default_round, default_break)
-    print(f"\nyour total average work round is: {average_round:.2f}.")
-    print(f"your total average break is: {average_break:.2f}.")
+    average_round, average_break = total_average_round_time()
+    print(f"\nOn average your rounds are {average_round:.1f} mins long.")
+    print(f"On average your breaks are {average_break:.1f} mins long.")
     if (average_break != 0):
-        print(f"your ratio is: {(average_round/average_break):.2f}. The standard pomodoro ratio is: 5.")
+        print(f"your ratio is: {(average_round/average_break):.1f}. The standard pomodoro ratio is: 5.")
+    return session_rounds, session_breaks
 
-def total_average_round_time(default_round, default_break):
+def total_average_round_time():
     round_sum = 0
     round_count = 0
     break_sum = 0
@@ -207,4 +205,4 @@ def total_average_round_time(default_round, default_break):
         average_break = break_sum / break_count
 
         return average_round, average_break
-    return default_round, default_break
+    return 0,0
