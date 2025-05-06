@@ -20,7 +20,3 @@ Planned features:
 
     - changing the default values of the sessions and breaks to better suit your needs
     - SQLite integration
-    - a frontend, using simple javascript to escape the CLI
-    - spotify integration:
-        - automatically stop and start your current song in when starting or finishing a session
-        - automatically change the output device to encourage the user to get up from the desk and to continue to listen to the music on their phone
