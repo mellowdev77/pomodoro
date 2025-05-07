@@ -1,5 +1,7 @@
 from main import *
 from main import Config
+from db import *
+import sqlite3
 import random
 
 # utils
@@ -103,21 +105,24 @@ def set_default_config():
 
 # break actions
 def create_actions():
-    with open('config/actions.config', 'w') as file:
-        print("Creating actions... (exit, quit, q, e)")
-        user_input = ""
+    print("Creating actions... (exit, quit, q, e)")
+    user_input = ""
 
-        while user_input != "exit" and user_input != "quit" and user_input != "q" and user_input != "e":
-            print("New Action: ")
-            user_input = input()
-            file.write(user_input + ";")
+    while True:
+        print("New Action: ")
+        user_input = input()
+        if user_input == "exit" or user_input == "quit" or user_input == "q" or user_input == "e":
+            break
+        insert_into_table("ACTIONS", user_input)
 
 def random_actions():
     actions = []
     return_string = ""
 
-    with open('config/actions.config', 'r') as file:
-        actions = file.read().split(";")[:-2]
+    rows = get_all_rows("ACTIONS")
+    actions = []
+    for action in rows:
+        actions.append(action["actions"])
 
     random.shuffle(actions)
     length = len(actions)
@@ -133,51 +138,47 @@ def random_actions():
 
 # quotes
 def load_default_quote():
-    with open('config/default_quote.config', 'r') as file:
-        return file.read()
+    return get_first_row("DEFAULT_QUOTE", "default_quote")
 
 def change_default_quote():
-    with open('config/default_quote.config', 'w') as file:
-        print("insert the new default quote:")
-        user_input = input()
-        file.write(user_input)
-        default_quote = user_input
+    print("insert the new default quote:")
+    default_quote = input()
+    update_table("DEFAULT_QUOTE", "default_quote", default_quote)
+
     return default_quote
 
 # break and round duration
 def load_default_lengths():
-    with open('config/default_length.config', 'r') as file:
-        read = file.read().split(",")
-        default_round = float(read[0])
-        default_break = float(read[1])
+    default_round = get_row("DEFAULT_LENGTH", "default_round_length")
+    print(default_round)
+    default_break = get_row("DEFAULT_LENGTH", "default_break_length")
     return default_round, default_break
 
 def change_default_lengths():
     default_round = 25
     default_break = 5
-    with open('config/default_length.config', 'w') as file:
-        flag = True
-        while (flag):
-            print("Round Length:")
-            round_time = input()
-            print("Break Length:")
-            break_time = input()
-            try:
-                round_time = float(round_time)
-                break_time = float(break_time)
-                file.write(f"{round_time},{break_time}")
-                default_round = round_time
-                default_break = break_time
-                flag = False
-            except:
-                print("\n...length should be a number...\n")
+    while (True):
+        print("Round Length:")
+        round_time = input()
+        print("Break Length:")
+        break_time = input()
+        try:
+            round_time = float(round_time)
+            break_time = float(break_time)
+        except:
+            print("\n...length should be a number...\n")
+        finally:
+            update_table("DEFAULT_LENGTH", "default_round_length", f"'{round_time}'")
+            update_table("DEFAULT_LENGTH", "default_break_length", f"'{break_time}'")
+            default_round = round_time
+            default_break = break_time
+            break
     return default_round, default_break
 
 def save_average_duration_over_time(session_rounds, session_breaks,):
     if session_rounds[0] != 0 and session_rounds[0] != 0:
-        with open('config/average_ratio.config', 'a') as file:
-            # average round length, amount of rounds, average break length, amount of breaks
-            file.write(f"{session_rounds[0]},{session_rounds[1]},{session_breaks[0]},{session_breaks[1]};")
+        # average round length, amount of rounds, average break length, amount of breaks
+        insert_into_table("AVERAGE_RATIO", f"('{session_rounds[0]}','{session_rounds[1]}','{session_breaks[0]}','{session_breaks[1]}')")
 
     average_round, average_break = total_average_round_time()
     print(f"\nOn average your rounds are {average_round:.1f} mins long.")
@@ -191,14 +192,14 @@ def total_average_round_time():
     round_count = 0
     break_sum = 0
     break_count = 0
-    with open('config/average_ratio.config', 'r') as file:
-        for line in file.read().split(";"):
-            if line != "" and line != "\n":
-                round_sum += float(line.split(",")[0]) * float(line.split(",")[1])
-                round_count += float(line.split(",")[1])
 
-                break_sum += float(line.split(",")[2]) * float(line.split(",")[3])
-                break_count += float(line.split(",")[3])
+    rows = get_all_rows("AVERAGE_RATIO")
+    for row in rows:
+        round_sum += float(row["average_round_length"]) * float(row["average_round_count"])
+        round_count += float(row["average_round_count"])
+
+        break_sum += float(row["average_break_length"]) * float(row["average_break_count"])
+        break_count += float(row["average_break_count"])
 
     if round_count != 0 and break_count != 0:
         average_round = round_sum / round_count
