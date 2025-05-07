@@ -34,6 +34,7 @@ def create_tables():
     cnt.commit()
     cnt.close()
 
+#TODO, only insert if the tables are empty.
 def insert_default_values():
     # create connection to database
     cnt = sqlite3.connect('config.db')
@@ -47,6 +48,7 @@ def insert_default_values():
     cnt.commit()
     cnt.close()
 
+#TODO, only insert if its empty.
 def insert_into_table(table, values):
     # create connection to database
     cnt = sqlite3.connect('config.db')
@@ -54,6 +56,15 @@ def insert_into_table(table, values):
     cnt.execute(f"INSERT INTO {table} VALUES('{values}')")
 
     # Query the data
+    cnt.commit()
+    cnt.close()
+
+# TODO, not working as intended. Is replacing all the rows with the same value.
+def update_table(table, row, value):
+    # create connection to database
+    cnt = sqlite3.connect('config.db')
+
+    cnt.execute(f"UPDATE {table} SET {row} = '{value}'")
     cnt.commit()
     cnt.close()
 
@@ -91,14 +102,6 @@ def get_all_rows(table):
     result = cursor.fetchall()
     cnt.close()
     return result
-
-def update_table(table, row, value):
-    # create connection to database
-    cnt = sqlite3.connect('config.db')
-
-    cnt.execute(f"UPDATE {table} SET {row} = '{value}'")
-    cnt.commit()
-    cnt.close()
 
 create_tables()
 insert_default_values()
