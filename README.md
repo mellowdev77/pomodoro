@@ -15,8 +15,9 @@ Current features:
     - set suggested actions for the breaks
     - display the average session and break time (allowing you to gauge how you tend to prefer to work over time)
     - configure whether the sessions and breaks should start automatically or if they should wait for user input
+    - changing the default values of the sessions and breaks to better suit your needs
+    - SQLite integration
 
 Planned features:
 
-    - changing the default values of the sessions and breaks to better suit your needs
-    - SQLite integration
+    - easily compile on linux and windows

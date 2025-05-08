@@ -1,5 +1,4 @@
 from main import *
-from main import Config
 from db import *
 import sqlite3
 import random
@@ -19,89 +18,74 @@ def string_to_boolean(input):
         case _:
             return False
 
+def start_db():
+    create_tables()
+    empty_tables = get_empty_tables()
+    if empty_tables:
+        insert_default_values(empty_tables)
+
 # config
 def load_config(first_time):
     config = Config()
-    with open('config/config.config', 'r') as file:
-        for line in file.read().split("\n"):
-            line_values = line.split("=")
-            if len(line_values) < 2:
-                return config
+    configs = get_all_rows("CONFIG")
 
-            bool_value = string_to_boolean(line_values[1][:-1])
-            config_name = line_values[0]
+    for config_name in configs[0].keys():
+        bool_value = bool(configs[0][config_name])
 
-            match(config_name.strip()):
-                case "update_config":
-                    if bool_value and first_time:
-                        update_config(config)
-                        return load_config(False)
-                    else:
-                        print("not updating config... saved on config/config.config")
-                case "create_actions":
-                    if bool_value:
-                        create_actions()
-                case "load_new_quote":
-                    config.load_quotes = bool_value
-                case "instant_start_timers":
-                    config.timers_dont_wait_for_user = bool_value
-                case "change_default_quote":
-                    if bool_value:
-                        config.default_quote = change_default_quote()
-                case "default_timers_based_on_round_average":
-                    config.timers_based_on_average = bool_value
-                case "change_default_timers":
-                    if bool_value:
-                        config.default_round, config.default_break = change_default_lengths()
-                case _:
-                    pass
+        match(config_name):
+            case "update_config":
+                if bool_value and first_time:
+                    update_config(config)
+                    return load_config(False)
+                else:
+                    print("not updating config... saved on config/config.config")
+            case "create_actions":
+                if bool_value:
+                    create_actions()
+            case "load_new_quote":
+                config.load_quotes = bool_value
+            case "instant_start_timers":
+                config.timers_dont_wait_for_user = not bool_value
+            case "change_default_quote":
+                if bool_value:
+                    config.default_quote = change_default_quote()
+            case "default_timers_based_on_round_average":
+                config.timers_based_on_average = bool_value
+            case "change_default_timers":
+                if bool_value:
+                    config.default_round, config.default_break = change_default_lengths()
+            case _:
+                pass
     return config
 
 def update_config(config):
     print("updating the config...")
-    operations = []
-    with open('config/config.config', 'r') as file:
-        for line in file.read().split("\n"):
-            line_values = line.split("=")
-            config_name = line_values[0]
-            if len(config_name) > 1:
-                operations.append(config_name.strip())
 
-    with open('config/config.config', 'w') as file:
-        for operation in operations:
-            text = ""
-            match operation:
-                case "update_config":
-                    text = "Customize the configuration on the next launch?"
-                case "create_actions":
-                    text = "Create new actions for breaks?"
-                case "load_new_quote":
-                    text = "Show a random quote at the start of each round?"
-                case "instant_start_timers":
-                    text = "Start rounds and breaks automatically?"
-                case "change_default_quote":
-                    text = "Change your default quote?"
-                case "default_timers_based_on_round_average":
-                    text = f"Use your average round and break duration instead of the default? ({config.default_round}, {config.default_break})?"
-                case "change_default_timers":
-                    text = f"Change your default timers length? Current: ({config.default_round}, {config.default_break})?"
-                case _:
-                    text = f"Please provide a value for: {operation}."
+    configs = get_all_rows("CONFIG")
 
-            print(text)
-            bool_value = string_to_boolean(input())
-            file.write(f"{operation}={bool_value};\n")
+    for config_name in configs[0].keys():
+        text = ""
+        match config_name:
+            case "update_config":
+                text = "Customize the configuration on the next launch?"
+            case "create_actions":
+                text = "Create new actions for breaks?"
+            case "load_new_quote":
+                text = "Show a random quote at the start of each round?"
+            case "instant_start_timers":
+                text = "Start rounds and breaks automatically?"
+            case "change_default_quote":
+                text = "Change your default quote?"
+            case "default_timers_based_on_round_average":
+                text = f"Use your average round and break duration instead of the default? ({config.default_round}, {config.default_break})?"
+            case "change_default_timers":
+                text = f"Change your default timers length? Current: ({config.default_round}, {config.default_break})?"
+            case _:
+                text = f"Please provide a value for: {config_name.text}."
 
-def set_default_config():
-    flag = False
-    with open('config/config.config', 'r') as file:
-        if len(file.read()) <= 0:
-            flag = True
-
-    # config file is empty, override with default
-    if flag:
-        with open('config/config.config', 'w') as file:
-            file.write("update_config=True;\ncreate_actions=False;\nload_new_quote=False;\ninstant_start_timers=False;\nchange_default_quote=False;\ndefault_timers_based_on_session_average=False;\nchange_default_length=False;")
+        print(text)
+        bool_value = string_to_boolean(input())
+        update_table("CONFIG", config_name, int(bool_value))
 
 # break actions
 def create_actions():
@@ -149,9 +133,8 @@ def change_default_quote():
 
 # break and round duration
 def load_default_lengths():
-    default_round = get_row("DEFAULT_LENGTH", "default_round_length")
-    print(default_round)
-    default_break = get_row("DEFAULT_LENGTH", "default_break_length")
+    default_round = get_first_row("DEFAULT_LENGTH", "default_round_length")
+    default_break = get_first_row("DEFAULT_LENGTH", "default_break_length")
     return default_round, default_break
 
 def change_default_lengths():
@@ -175,10 +158,10 @@ def change_default_lengths():
             break
     return default_round, default_break
 
-def save_average_duration_over_time(session_rounds, session_breaks,):
+def save_average_duration_over_time(session_rounds, session_breaks):
     if session_rounds[0] != 0 and session_rounds[0] != 0:
         # average round length, amount of rounds, average break length, amount of breaks
-        insert_into_table("AVERAGE_RATIO", f"('{session_rounds[0]}','{session_rounds[1]}','{session_breaks[0]}','{session_breaks[1]}')")
+        insert_into_table("AVERAGE_RATIO", f"{session_rounds[0]}','{session_rounds[1]}','{session_breaks[0]}','{session_breaks[1]}")
 
     average_round, average_break = total_average_round_time()
     print(f"\nOn average your rounds are {average_round:.1f} mins long.")

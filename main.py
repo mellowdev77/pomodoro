@@ -53,12 +53,14 @@ def update_session_average(action, duration, session_rounds, session_breaks):
             total = (average_duration * amount_of_rounds) + duration
             new_average = total / (amount_of_rounds + 1)
             session_rounds = (new_average, amount_of_rounds + 1)
-    return session_breaks, session_rounds
+    return session_rounds, session_breaks
 
 def calculate_time_passed(previous_time):
     return ((time.localtime().tm_hour - previous_time.tm_hour)*24*60 + (time.localtime().tm_min - previous_time.tm_min)*60 + (time.localtime().tm_sec - previous_time.tm_sec))/60
 
+# TODO, easier and more intuitive way to change the config on startup
 if __name__ == "__main__":
+    start_db()
     config = load_config(True)
 
     config.default_quote = load_default_quote()
@@ -83,7 +85,7 @@ if __name__ == "__main__":
             start_action("round")
             # round started
             send_notification(f"Round Started! ({round_time} mins)", quote)
-            time.sleep(60 * round_time)
+            #time.sleep(60 * round_time)
             round_duration = calculate_time_passed(time_before_start)
             session_rounds, session_breaks = update_session_average("round", round_duration, session_rounds, session_breaks)
 
@@ -109,7 +111,6 @@ if __name__ == "__main__":
             session_rounds, session_breaks = update_session_average("break", round_duration, session_rounds, session_breaks)
 
     except KeyboardInterrupt:
-        set_default_config()
         save_average_duration_over_time(session_rounds, session_breaks)
 
         print(f"\nThis session, your {session_rounds[1]} rounds were on average {session_rounds[0]:.1f} mins long each.")
