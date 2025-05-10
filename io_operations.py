@@ -7,13 +7,7 @@ import random
 def string_to_boolean(input):
     input = input.lower().strip()
     match input:
-        case "yes":
-            return True
-        case "y":
-            return True
-        case "true":
-            return True
-        case "t":
+        case "yes" | "y" | "true" | "t":
             return True
         case _:
             return False
@@ -25,14 +19,15 @@ def start_db():
         insert_default_values(empty_tables)
 
 def recieve_arguments():
-    match (sys.argv[1]):
-        case "-config":
-            update_config()
-        case "-drop":
-            drop_tables()
-            start_db()
-        case _:
-            print("not updating config...")
+    for arg in sys.argv:
+        match (arg.lower()):
+            case "-config" | "-c" | "-update_config" | "-update":
+                update_config()
+            case "-drop" | "-restart" | "-delete":
+                drop_tables()
+                start_db()
+            case _:
+                print("not updating config...")
 
 # config
 def load_config():
