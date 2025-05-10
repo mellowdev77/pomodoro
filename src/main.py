@@ -92,8 +92,6 @@ if __name__ == "__main__":
                 # round started, add passed time to break average
                 break_duration = calculate_time_passed(time_before_start)
                 session_rounds, session_breaks = update_session_average("break", break_duration, session_rounds, session_breaks)
-            print(f"session_rounds: {session_rounds}")
-            print(f"session_breaks: {session_breaks}")
 
             send_notification(f"Round Started! ({round_time} mins)", quote)
             time_before_start = time.localtime()
@@ -114,8 +112,6 @@ if __name__ == "__main__":
             start_action(break_text)
             round_duration = calculate_time_passed(time_before_start)
             session_rounds, session_breaks = update_session_average("round", round_duration, session_rounds, session_breaks)
-            print(f"session_rounds: {session_rounds}")
-            print(f"session_breaks: {session_breaks}")
             send_notification(f"Break Started! ({break_duration} mins)", actions, 15)
 
             # break or long break started
