@@ -1,3 +1,4 @@
 .zed
 venv
 **/__pycache__/
+*.db
