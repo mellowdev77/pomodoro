@@ -5,7 +5,6 @@ def create_tables():
 
     # Create a CONFIG TABLE
     cnt.execute('''CREATE TABLE IF NOT EXISTS CONFIG(
-    update_config INTEGER,
     create_actions INTEGER,
     load_new_quote INTEGER,
     instant_start_timers INTEGER,
@@ -39,11 +38,11 @@ def insert_default_values(empty_tables):
     for table in empty_tables:
         match table:
             case "CONFIG":
-                cnt.execute('''INSERT INTO CONFIG VALUES(0,0,1,0,0,0,0)''')
+                cnt.execute('''INSERT INTO CONFIG VALUES(0,1,0,0,0,0)''')
             case "ACTIONS":
                 cnt.execute('''INSERT INTO ACTIONS VALUES('Meditate'),('Jumping Jacks'),('Pushups'),('Squats'),('Walk the dogs'),('Read a book'),('Go outside')''')
             case "AVERAGE_RATIO":
-                cnt.execute('''INSERT INTO AVERAGE_RATIO VALUES(25,1,5,1)''')
+                cnt.execute('''INSERT INTO AVERAGE_RATIO VALUES(25,0,5,0)''')
             case "DEFAULT_LENGTH":
                 cnt.execute('''INSERT INTO DEFAULT_LENGTH VALUES(25,5)''')
             case "DEFAULT_QUOTE":
@@ -75,6 +74,11 @@ def drop_table(table):
     cnt = sqlite3.connect('config.db')
     cnt.execute(f"DROP TABLE IF EXISTS {table}")
     cnt.close()
+
+def drop_tables():
+    tables = ["ACTIONS", "CONFIG", "DEFAULT_LENGTH", "DEFAULT_QUOTE", "AVERAGE_RATIO"]
+    for table in tables:
+        drop_table(table)
 
 def get_first_row(table, row):
     # create connection to database

@@ -24,8 +24,18 @@ def start_db():
     if empty_tables:
         insert_default_values(empty_tables)
 
+def recieve_arguments():
+    match (sys.argv[1]):
+        case "-config":
+            update_config()
+        case "-drop":
+            drop_tables()
+            start_db()
+        case _:
+            print("not updating config...")
+
 # config
-def load_config(first_time):
+def load_config():
     config = Config()
     configs = get_all_rows("CONFIG")
 
@@ -33,12 +43,6 @@ def load_config(first_time):
         bool_value = bool(configs[0][config_name])
 
         match(config_name):
-            case "update_config":
-                if bool_value and first_time:
-                    update_config(config)
-                    return load_config(False)
-                else:
-                    print("not updating config... saved on config/config.config")
             case "create_actions":
                 if bool_value:
                     create_actions()
@@ -58,16 +62,14 @@ def load_config(first_time):
                 pass
     return config
 
-def update_config(config):
+def update_config():
     print("updating the config...")
 
-    configs = get_all_rows("CONFIG")
-
-    for config_name in configs[0].keys():
+    rows = get_all_rows("CONFIG")
+    default_round, default_break = load_default_lengths()
+    for config_name in rows[0].keys():
         text = ""
         match config_name:
-            case "update_config":
-                text = "Customize the configuration on the next launch?"
             case "create_actions":
                 text = "Create new actions for breaks?"
             case "load_new_quote":
@@ -77,11 +79,11 @@ def update_config(config):
             case "change_default_quote":
                 text = "Change your default quote?"
             case "default_timers_based_on_round_average":
-                text = f"Use your average round and break duration instead of the default? ({config.default_round}, {config.default_break})?"
+                text = f"Use your average round and break duration instead of the default? ({default_round}, {default_break})"
             case "change_default_timers":
-                text = f"Change your default timers length? Current: ({config.default_round}, {config.default_break})?"
+                text = f"Change your default timers length? Current: ({default_round}, {default_break})"
             case _:
-                text = f"Please provide a value for: {config_name.text}."
+                text = f"Please provide a value for: {config_name}."
 
         print(text)
         bool_value = string_to_boolean(input())

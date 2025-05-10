@@ -1,3 +1,4 @@
+import sys
 import time
 import requests
 from plyer import notification
@@ -58,10 +59,13 @@ def update_session_average(action, duration, session_rounds, session_breaks):
 def calculate_time_passed(previous_time):
     return ((time.localtime().tm_hour - previous_time.tm_hour)*24*60 + (time.localtime().tm_min - previous_time.tm_min)*60 + (time.localtime().tm_sec - previous_time.tm_sec))/60
 
+
+
 # TODO, easier and more intuitive way to change the config on startup
 if __name__ == "__main__":
     start_db()
-    config = load_config(True)
+    recieve_arguments()
+    config = load_config()
 
     config.default_quote = load_default_quote()
     config.default_round, config.default_break = load_default_lengths()
@@ -85,7 +89,7 @@ if __name__ == "__main__":
             start_action("round")
             # round started
             send_notification(f"Round Started! ({round_time} mins)", quote)
-            #time.sleep(60 * round_time)
+            time.sleep(60 * round_time)
             round_duration = calculate_time_passed(time_before_start)
             session_rounds, session_breaks = update_session_average("round", round_duration, session_rounds, session_breaks)
 
