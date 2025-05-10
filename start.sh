@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if command -v python3 &>/dev/null; then
-    python3 main.py
+    python3 src/main.py
 elif command -v python &>/dev/null; then
-    python main.py
+    python src/main.py
 else
     echo "Please install python before lauching the application."
     exit 1

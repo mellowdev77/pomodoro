@@ -5,6 +5,8 @@ from plyer import notification
 from io_operations import *
 from dataclasses import dataclass
 
+import io_operations
+
 @dataclass
 class Config:
     load_quotes: bool = True
