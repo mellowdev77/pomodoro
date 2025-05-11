@@ -1,4 +1,5 @@
 import sqlite3
+
 def create_tables():
     # create connection to database
     cnt = sqlite3.connect('config.db')
@@ -7,9 +8,9 @@ def create_tables():
     cnt.execute('''CREATE TABLE IF NOT EXISTS CONFIG(
     create_actions INTEGER,
     load_new_quote INTEGER,
-    instant_start_timers INTEGER,
     change_default_quote INTEGER,
-    default_timers_based_on_round_average INTEGER,
+    timers_wait_for_user INTEGER,
+    timers_based_on_average INTEGER,
     change_default_timers INTEGER);''')
 
     # Create a AVERAGE_RATIO TABLE
@@ -38,11 +39,11 @@ def insert_default_values(empty_tables):
     for table in empty_tables:
         match table:
             case "CONFIG":
-                cnt.execute('''INSERT INTO CONFIG VALUES(0,1,0,0,0,0)''')
+                cnt.execute('''INSERT INTO CONFIG VALUES(0,1,0,1,0,0)''')
             case "ACTIONS":
                 cnt.execute('''INSERT INTO ACTIONS VALUES('Meditate'),('Jumping Jacks'),('Pushups'),('Squats'),('Walk the dogs'),('Read a book'),('Go outside')''')
             case "AVERAGE_RATIO":
-                cnt.execute('''INSERT INTO AVERAGE_RATIO VALUES(25,0,5,0)''')
+                cnt.execute('''INSERT INTO AVERAGE_RATIO VALUES(25,1,5,1)''')
             case "DEFAULT_LENGTH":
                 cnt.execute('''INSERT INTO DEFAULT_LENGTH VALUES(25,5)''')
             case "DEFAULT_QUOTE":
@@ -69,16 +70,12 @@ def update_table(table, row, value):
     cnt.commit()
     cnt.close()
 
-def drop_table(table):
-    # create connection to database
-    cnt = sqlite3.connect('config.db')
-    cnt.execute(f"DROP TABLE IF EXISTS {table}")
-    cnt.close()
-
 def drop_tables():
+    cnt = sqlite3.connect('config.db')
     tables = ["ACTIONS", "CONFIG", "DEFAULT_LENGTH", "DEFAULT_QUOTE", "AVERAGE_RATIO"]
     for table in tables:
-        drop_table(table)
+        cnt.execute(f"DROP TABLE IF EXISTS {table}")
+    cnt.close()
 
 def get_first_row(table, row):
     # create connection to database

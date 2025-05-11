@@ -1,7 +1,17 @@
-from main import *
 from db import *
 import sqlite3
 import random
+import sys
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    load_new_quote: bool = True
+    timers_wait_for_user: bool = True
+    default_quote: str = "Chop wood"
+    default_round: float = 25.0
+    default_break: float = 5.0
+    timers_based_on_average = True
 
 # utils
 def string_to_boolean(input):
@@ -12,56 +22,42 @@ def string_to_boolean(input):
         case _:
             return False
 
-def start_db():
-    create_tables()
-    empty_tables = get_empty_tables()
-    if empty_tables:
-        insert_default_values(empty_tables)
-
-def recieve_arguments():
-    for arg in sys.argv:
-        match (arg.lower()):
-            case "-config" | "-c" | "-update_config" | "-update":
-                update_config()
-            case "-drop" | "-restart" | "-delete":
-                drop_tables()
-                start_db()
-            case _:
-                print("not updating config...")
 
 # config
 def load_config():
     config = Config()
-    configs = get_all_rows("CONFIG")
 
-    for config_name in configs[0].keys():
-        bool_value = bool(configs[0][config_name])
+    if bool(get_first_row("CONFIG", "create_actions")):
+        create_actions()
 
-        match(config_name):
-            case "create_actions":
-                if bool_value:
-                    create_actions()
-            case "load_new_quote":
-                config.load_quotes = bool_value
-            case "instant_start_timers":
-                config.timers_dont_wait_for_user = not bool_value
-            case "change_default_quote":
-                if bool_value:
-                    config.default_quote = change_default_quote()
-            case "default_timers_based_on_round_average":
-                config.timers_based_on_average = bool_value
-            case "change_default_timers":
-                if bool_value:
-                    config.default_round, config.default_break = change_default_lengths()
-            case _:
-                pass
+    if bool(get_first_row("CONFIG", "load_new_quote")):
+        config.load_new_quote = True
+
+    if bool(get_first_row("CONFIG", "timers_based_on_average")):
+        config.timers_based_on_average = True
+
+    if bool(get_first_row("CONFIG", "timers_wait_for_user")):
+        config.timers_wait_for_user = True
+
+    if bool(get_first_row("CONFIG", "change_default_timers")):
+        config.default_round, config.default_break = change_default_timers()
+
+    if bool(get_first_row("CONFIG", "change_default_quote")):
+        print("insert the new default quote:")
+        config.default_quote = input()
+        update_table("DEFAULT_QUOTE", "default_quote", config.default_quote)
+
+    config.default_round = get_first_row("DEFAULT_LENGTH", "default_round_length")
+    config.default_break = get_first_row("DEFAULT_LENGTH", "default_break_length")
     return config
 
 def update_config():
     print("updating the config...")
 
     rows = get_all_rows("CONFIG")
-    default_round, default_break = load_default_lengths()
+    default_round = get_first_row("DEFAULT_LENGTH", "default_round_length")
+    default_break = get_first_row("DEFAULT_LENGTH", "default_break_length")
+
     for config_name in rows[0].keys():
         text = ""
         match config_name:
@@ -117,34 +113,18 @@ def random_actions():
 
     return return_string
 
-# quotes
-def load_default_quote():
-    return get_first_row("DEFAULT_QUOTE", "default_quote")
-
-def change_default_quote():
-    print("insert the new default quote:")
-    default_quote = input()
-    update_table("DEFAULT_QUOTE", "default_quote", default_quote)
-
-    return default_quote
-
 # break and round duration
-def load_default_lengths():
-    default_round = get_first_row("DEFAULT_LENGTH", "default_round_length")
-    default_break = get_first_row("DEFAULT_LENGTH", "default_break_length")
-    return default_round, default_break
-
-def change_default_lengths():
+def change_default_timers():
     default_round = 25
     default_break = 5
+    round_time = 0.0
+    break_time = 0.0
     while (True):
-        print("Round Length:")
-        round_time = input()
-        print("Break Length:")
-        break_time = input()
         try:
-            round_time = float(round_time)
-            break_time = float(break_time)
+            print("Round Length:")
+            round_time = float(input())
+            print("Break Length:")
+            break_time = float(input())
         except:
             print("\n...length should be a number...\n")
         finally:
@@ -156,25 +136,14 @@ def change_default_lengths():
     return default_round, default_break
 
 def save_average_duration_over_time(session_rounds, session_breaks):
+    round_sum, round_count, break_sum, break_count = 0, 0, 0, 0
+    average_round, average_break, ratio = 0, 0, 0
+
     if session_rounds[0] != 0 and session_rounds[0] != 0:
         # average round length, amount of rounds, average break length, amount of breaks
         insert_into_table("AVERAGE_RATIO", f"{session_rounds[0]}','{session_rounds[1]}','{session_breaks[0]}','{session_breaks[1]}")
 
-    average_round, average_break = total_average_round_time()
-    print(f"\nOn average your rounds are {average_round:.1f} mins long.")
-    print(f"On average your breaks are {average_break:.1f} mins long.")
-    if (average_break != 0):
-        print(f"your ratio is: {(average_round/average_break):.1f}. The standard pomodoro ratio is: 5.")
-    return session_rounds, session_breaks
-
-def total_average_round_time():
-    round_sum = 0
-    round_count = 0
-    break_sum = 0
-    break_count = 0
-
-    rows = get_all_rows("AVERAGE_RATIO")
-    for row in rows:
+    for row in get_all_rows("AVERAGE_RATIO"):
         round_sum += float(row["average_round_length"]) * float(row["average_round_count"])
         round_count += float(row["average_round_count"])
 
@@ -184,6 +153,10 @@ def total_average_round_time():
     if round_count != 0 and break_count != 0:
         average_round = round_sum / round_count
         average_break = break_sum / break_count
+        ratio = average_round/average_break
 
-        return average_round, average_break
-    return 0,0
+    print(f"\nOn average your rounds are {average_round:.1f} mins long.")
+    print(f"On average your breaks are {average_break:.1f} mins long.")
+    print(f"Your ratio is: {ratio:.1f} The standard pomodoro ratio is: 5.0\n")
+    print(f"This session, your {round_count} rounds were on average {average_round:.1f} mins long each.")
+    print(f"This session, your {break_count} breaks were on average {average_break:.1f} mins long each.")
