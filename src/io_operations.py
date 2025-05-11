@@ -1,8 +1,8 @@
-from db import *
 import sqlite3
 import random
 import sys
 from dataclasses import dataclass
+from db import *
 
 @dataclass
 class Config:
@@ -21,7 +21,6 @@ def string_to_boolean(input):
             return True
         case _:
             return False
-
 
 # config
 def load_config():
