@@ -53,8 +53,10 @@ if __name__ == "__main__":
         update_config()
 
     config = load_config()
-    session_rounds = (0,0)
-    session_breaks = (0,0)
+    round_avg = 0
+    round_count = 0
+    break_avg = 0
+    break_count = 0
     first_loop = True
     time_before_start = time.localtime()
 
@@ -63,7 +65,7 @@ if __name__ == "__main__":
 
         for row in get_all_rows("AVERAGE_RATIO"):
             round_sum += float(row["average_round_length"]) * float(row["average_round_count"])
-            round_count += float(row["average_round_count"])
+            break_count += float(row["average_round_count"])
 
             break_sum += float(row["average_break_length"]) * float(row["average_break_count"])
             break_count += float(row["average_break_count"])
@@ -84,9 +86,9 @@ if __name__ == "__main__":
             start_action("round")
             if not first_loop:
                 # round started, add passed time to break average
-                total_time_passed = (session_breaks[0] * session_breaks[1]) + calculate_time_passed(time_before_start)
-                new_average = total_time_passed / (session_breaks[1] + 1)
-                session_breaks = (new_average, session_breaks[1] + 1)
+                total_time_passed = (break_avg * break_count) + calculate_time_passed(time_before_start)
+                break_count += 1
+                break_avg = total_time_passed / break_count
 
             notification.notify(f"Round Started! ({config.default_round} mins)", quote)
             time_before_start = time.localtime()
@@ -97,7 +99,7 @@ if __name__ == "__main__":
             break_text = "break"
 
             # every 5th break, take an extra 10 mins off
-            if session_rounds[1] != 0 and session_rounds[1] % 5 == 0:
+            if round_count != 0 and break_count % 5 == 0:
                 break_duration = config.default_break + 10
                 break_text = "long break"
 
@@ -105,9 +107,9 @@ if __name__ == "__main__":
                 notification.notify(f"Round Over! Start the {str.capitalize(break_text)} ({break_duration} mins)", "", timeout = 5)
 
             start_action(break_text)
-            total_time_passed = (session_rounds[0] * session_rounds[1]) + calculate_time_passed(time_before_start)
-            new_average = total_time_passed / (session_rounds[1] + 1)
-            session_rounds = (new_average, session_rounds[1] + 1)
+            total_time_passed = (round_avg * round_count) + calculate_time_passed(time_before_start)
+            round_count += 1
+            round_avg = total_time_passed / round_count
             notification.notify(f"Break Started! ({break_duration} mins)", actions, timeout = 15)
 
             # break or long break started
@@ -116,7 +118,7 @@ if __name__ == "__main__":
             first_loop = False
 
     except KeyboardInterrupt:
-        save_average_duration_over_time(session_rounds, session_breaks)
+        save_average_duration_over_time(round_avg, round_count, break_avg, break_count)
 
         print("\n....closing pomodoro app...")
         exit()

@@ -134,28 +134,28 @@ def change_default_timers():
             break
     return default_round, default_break
 
-def save_average_duration_over_time(session_rounds, session_breaks):
-    round_sum, round_count, break_sum, break_count = 0, 0, 0, 0
+def save_average_duration_over_time(round_avg, round_count, break_avg, break_count):
+    total_rounds_sum, total_rounds_count, total_breaks_sum, total_breaks_count = 0, 0, 0, 0
     average_round, average_break, ratio = 0, 0, 0
 
-    if session_rounds[0] != 0 and session_rounds[0] != 0:
+    if round_avg != 0 and break_avg != 0:
         # average round length, amount of rounds, average break length, amount of breaks
-        insert_into_table("AVERAGE_RATIO", f"{session_rounds[0]}','{session_rounds[1]}','{session_breaks[0]}','{session_breaks[1]}")
+        insert_into_table("AVERAGE_RATIO", f"{round_avg}','{round_count}','{break_avg}','{break_count}")
 
     for row in get_all_rows("AVERAGE_RATIO"):
-        round_sum += float(row["average_round_length"]) * float(row["average_round_count"])
-        round_count += float(row["average_round_count"])
+        total_rounds_sum += float(row["average_round_length"]) * float(row["average_round_count"])
+        total_rounds_count += float(row["average_round_count"])
 
-        break_sum += float(row["average_break_length"]) * float(row["average_break_count"])
-        break_count += float(row["average_break_count"])
+        total_breaks_sum += float(row["average_break_length"]) * float(row["average_break_count"])
+        total_breaks_count += float(row["average_break_count"])
 
-    if round_count != 0 and break_count != 0:
-        average_round = round_sum / round_count
-        average_break = break_sum / break_count
+    if total_rounds_count != 0 and total_breaks_count != 0:
+        average_round = total_rounds_sum / total_rounds_count
+        average_break = total_breaks_sum / total_breaks_count
         ratio = average_round/average_break
 
     print(f"\nOn average your rounds are {average_round:.1f} mins long.")
     print(f"On average your breaks are {average_break:.1f} mins long.")
     print(f"Your ratio is: {ratio:.1f} The standard pomodoro ratio is: 5.0\n")
-    print(f"This session, your {round_count} rounds were on average {average_round:.1f} mins long each.")
-    print(f"This session, your {break_count} breaks were on average {average_break:.1f} mins long each.")
+    print(f"This session, your {total_rounds_count} rounds were on average {average_round:.1f} mins long each.")
+    print(f"This session, your {total_breaks_count} breaks were on average {average_break:.1f} mins long each.")
